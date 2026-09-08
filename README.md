@@ -18,6 +18,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Environment variables
+
+Environment variables are validated with [T3 Env](https://env.t3.gg). Add server-only and `NEXT_PUBLIC_` variables to `app/env.ts`, include them in `runtimeEnv`, and import the exported `env` object instead of reading `process.env` throughout the application.
+
+The schema is imported by `next.config.ts`, so invalid or missing variables fail fast when the development server or production build starts.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

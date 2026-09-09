@@ -18,15 +18,78 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 Environment variables are validated with [T3 Env](https://env.t3.gg). Add server-only and `NEXT_PUBLIC_` variables to `app/env.ts`, include them in `runtimeEnv`, and import the exported `env` object instead of reading `process.env` throughout the application.
 
-The schema is imported by `next.config.ts`, so invalid or missing variables fail
-fast when the development server or production build starts. Copy `.env.example`
-to `.env.local` for local-only values. The application currently has no required
-application-specific variables; `NODE_ENV` is supplied by Next.js and validated.
+The schema is imported by `next.config.ts`, so invalid variables fail fast when
+the development server or production build starts. Copy `.env.example` to
+`.env.local` for local-only values. `NEXT_PUBLIC_API_URL` is the public base URL
+of the NestJS API. Development and tests default to `/api/mock` when it is unset.
+Production has no fallback: a request made there without configuration rejects
+with the normalized `MISSING_CONFIGURATION` application error. `NODE_ENV` is
+supplied by Next.js and validated.
+
+The example environment points to `/api/mock`, a same-origin Next.js Route
+Handler implementing the sample users domain. This keeps local development
+self-contained. Replace it with an absolute NestJS URL when the backend is
+available. Relative URLs are intentionally browser-only; server-side API calls
+must use an absolute URL.
 
 When variables are added, configure separate values in Vercel under Project
 Settings → Environment Variables for Development, Preview, and Production. Do not
 put secrets in `NEXT_PUBLIC_*`. CI should only receive safe build-time values that
 the build genuinely requires.
+
+## API data and errors
+
+Client-side server state follows one path:
+
+```text
+React component → TanStack Query → domain API → HTTP client → Axios → NestJS
+NestJS response → JSON parsing → Zod validation → typed data or AppError
+AppError → TanStack Query → UI error mapper
+```
+
+`app/providers.tsx` owns the shared browser `QueryClient`. Query definitions are
+kept beside their domain, such as `lib/api/users/users.queries.ts`; components can
+pass those definitions directly to `useQuery` or `useMutation`. Query functions
+forward TanStack Query's abort signal, and the shared retry policy makes at most
+one retry for network failures, timeouts, and selected transient 5xx responses.
+
+`lib/api/axios-instance.ts` contains the application's single configured Axios
+instance. It owns the base URL, 10-second timeout, common headers, optional bearer
+token injection, and response-error normalization. Register the application's
+token reader once with `configureApiAccessToken()` when authentication is added;
+individual components and domain modules must not add authorization headers.
+There is no refresh interceptor until the application has a real session and
+refresh-token contract.
+
+`lib/api/client.ts` wraps that instance and owns request bodies and endpoint Zod
+validation. External responses must pass the endpoint's schema. Malformed JSON or
+schema mismatches reject as `contract / INVALID_API_RESPONSE`; unvalidated data is
+never returned. The wrapper also normalizes errors from injected Axios instances,
+which keeps isolated tests and future specialized call sites on the same contract.
+
+NestJS errors should use this stable contract:
+
+```json
+{
+  "statusCode": 409,
+  "code": "EMAIL_ALREADY_EXISTS",
+  "message": "Email already exists",
+  "data": { "field": "email" }
+}
+```
+
+The frontend trusts `code` and `data` only after the payload passes its Zod schema
+and `statusCode` matches the actual HTTP status. HTML, malformed JSON, and other
+unexpected error bodies fall back to `HTTP_<status>`. UI code should call
+`mapError()` and use its presentation hint and localized-message key; it should
+not render the backend message or inspect raw Axios/Zod errors. Raw `AxiosError`
+instances are retained only as `AppError.originalError` for internal diagnostics.
+
+The bundled mock supports `GET /api/mock/users/:id` and
+`POST /api/mock/users`. It validates create-user input and deliberately provides
+`NOT_FOUND`, `VALIDATION_ERROR`, and `EMAIL_ALREADY_EXISTS` responses using the
+same contract expected from NestJS. It is a development fixture, not an
+authentication or persistence layer.
 
 ## Tests and local validation
 

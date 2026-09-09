@@ -1,9 +1,10 @@
 import { mockUsers } from "@/lib/api/users/users.mock";
 
-export async function GET(
-  _request: Request,
-  context: RouteContext<"/api/mock/users/[id]">,
-) {
+interface UserRouteContext {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(_request: Request, context: UserRouteContext) {
   const { id } = await context.params;
   const user = mockUsers.find((candidate) => candidate.id === id);
 

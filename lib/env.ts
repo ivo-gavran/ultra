@@ -8,6 +8,7 @@ const apiUrlSchema = z.union([
 
 export const env = createEnv({
   server: {
+    AUTH_SECRET: z.string().min(32).optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -16,6 +17,7 @@ export const env = createEnv({
     NEXT_PUBLIC_API_URL: apiUrlSchema.optional(),
   },
   runtimeEnv: {
+    AUTH_SECRET: process.env.AUTH_SECRET,
     NODE_ENV: process.env.NODE_ENV,
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL ??

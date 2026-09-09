@@ -43,6 +43,12 @@ const codeMappings: Readonly<Partial<Record<string, ErrorDescriptor>>> = {
     presentation: "auth",
     report: false,
   },
+  SESSION_EXPIRED: {
+    messageKey: "errors.sessionExpired",
+    defaultMessage: "Your session expired. Please sign in again.",
+    presentation: "auth",
+    report: false,
+  },
   FORBIDDEN: {
     messageKey: "errors.forbidden",
     defaultMessage: "You do not have permission to do that.",

@@ -32,6 +32,12 @@ self-contained. Replace it with an absolute NestJS URL when the backend is
 available. Relative URLs are intentionally browser-only; server-side API calls
 must use an absolute URL.
 
+`AUTH_SECRET` signs and encrypts Auth.js cookies. A development-only fallback is
+used outside production so tests and a fresh local checkout work immediately.
+Production has no fallback: generate a unique value with
+`openssl rand -base64 32` and configure it in every deployed environment. Never
+expose it through a `NEXT_PUBLIC_` variable.
+
 When variables are added, configure separate values in Vercel under Project
 Settings → Environment Variables for Development, Preview, and Production. Do not
 put secrets in `NEXT_PUBLIC_*`. CI should only receive safe build-time values that
@@ -56,11 +62,12 @@ one retry for network failures, timeouts, and selected transient 5xx responses.
 
 `lib/api/axios-instance.ts` contains the application's single configured Axios
 instance. It owns the base URL, 10-second timeout, common headers, optional bearer
-token injection, and response-error normalization. Register the application's
-token reader once with `configureApiAccessToken()` when authentication is added;
-individual components and domain modules must not add authorization headers.
-There is no refresh interceptor until the application has a real session and
-refresh-token contract.
+token injection, and response-error normalization. The bearer integration remains
+unconfigured for the current Auth.js flow: browser code cannot read the Auth.js
+cookie or any authentication token. If the future NestJS contract requires bearer
+tokens, resolve them behind a trusted server boundary rather than adding token
+knowledge to React components. There is no refresh interceptor or mock refresh
+system.
 
 `lib/api/client.ts` wraps that instance and owns request bodies and endpoint Zod
 validation. External responses must pass the endpoint's schema. Malformed JSON or
@@ -91,6 +98,42 @@ The bundled mock supports `GET /api/mock/users/:id` and
 `NOT_FOUND`, `VALIDATION_ERROR`, and `EMAIL_ALREADY_EXISTS` responses using the
 same contract expected from NestJS. It is a development fixture, not an
 authentication or persistence layer.
+
+## Authentication and authorization
+
+Auth.js is configured in root-level `auth.ts` with the Credentials provider and a
+JWT session stored only in Auth.js-managed, `HttpOnly` cookies. The public session
+contains exactly `id`, `email`, `name`, and `role`; authentication state is not
+copied into Zustand, React Context, TanStack Query, `localStorage`, or
+`sessionStorage`.
+
+The deterministic development fixtures are:
+
+| Role  | Email             | Password       |
+| ----- | ----------------- | -------------- |
+| USER  | user@example.com  | user-password  |
+| ADMIN | admin@example.com | admin-password |
+
+These plaintext values are intentionally isolated in
+`features/auth/domain/mock-auth.fixture.ts` and must never be treated as a
+production user store. When NestJS is available, replace
+`authenticateMockCredentials()` with the backend login call. The Credentials
+provider, server actions, React forms, session shape, and route protection can stay
+unchanged. Keep any backend token fields inside the server-side Auth.js boundary;
+do not add them to the session callback unless the browser genuinely needs them.
+
+The root `proxy.ts` performs only optimistic route checks:
+
+- guests are redirected from `/dashboard`, `/account`, and `/admin` to `/login`;
+- signed-in users are redirected away from `/login` and `/signup`;
+- the matcher does not run for API routes or static assets.
+
+Proxy is not the security boundary. `GET /api/mock/admin/users` checks the current
+session and the `ADMIN` role again. `DELETE /api/mock/comments/:id` checks the
+current session and allows only the comment author or an admin. Both return the
+same `UNAUTHORIZED` and `FORBIDDEN` error codes expected from the future NestJS
+guards/policies. `GET /api/auth/session` is the Auth.js current-session endpoint,
+and sign-out is handled by Auth.js as well.
 
 ## Tests and local validation
 
@@ -138,7 +181,8 @@ Vercel remains the deployment owner:
    `Vercel`. If this repository later maps to multiple Vercel projects, set the
    `project-slug` input on `vercel/wait-for-deployment-action`.
 2. Add application variables in Vercel with the correct Development, Preview, and
-   Production scopes. No application-specific variables are currently required.
+   Production scopes. `AUTH_SECRET` is required in all deployed environments;
+   generate a unique secret rather than copying the development example.
 3. If Preview Deployment Protection is enabled, create a Vercel Protection Bypass
    for Automation and add the same value as the GitHub Actions repository secret
    `VERCEL_AUTOMATION_BYPASS_SECRET`. The Playwright configuration sends it only as

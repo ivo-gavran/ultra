@@ -3,13 +3,13 @@ import { expect, test } from "vitest";
 
 import Home from "@/app/page";
 
-test("renders the home page heading", () => {
+test("renders the user overview heading", () => {
   render(<Home />);
 
   expect(
     screen.getByRole("heading", {
       level: 1,
-      name: /authentication and authorization starter/i,
+      name: /users/i,
     }),
   ).toBeDefined();
 });

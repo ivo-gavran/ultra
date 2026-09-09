@@ -32,7 +32,7 @@ the build genuinely requires.
 
 ```bash
 pnpm lint
-pnpm type-check
+pnpm typecheck
 pnpm test:ci
 pnpm build
 pnpm test:e2e

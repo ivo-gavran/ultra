@@ -16,7 +16,7 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Environment variables
 
-Environment variables are validated with [T3 Env](https://env.t3.gg). Add server-only and `NEXT_PUBLIC_` variables to `app/env.ts`, include them in `runtimeEnv`, and import the exported `env` object instead of reading `process.env` throughout the application.
+Environment variables are validated with [T3 Env](https://env.t3.gg). Add server-only and `NEXT_PUBLIC_` variables to `lib/env.ts`, include them in `runtimeEnv`, and import the exported `env` object instead of reading `process.env` throughout the application.
 
 The schema is imported by `next.config.ts`, so invalid variables fail fast when
 the development server or production build starts. Copy `.env.example` to
@@ -47,8 +47,9 @@ NestJS response → JSON parsing → Zod validation → typed data or AppError
 AppError → TanStack Query → UI error mapper
 ```
 
-`app/providers.tsx` owns the shared browser `QueryClient`. Query definitions are
-kept beside their domain, such as `lib/api/users/users.queries.ts`; components can
+`lib/query/client.ts` owns the shared browser `QueryClient`, while
+`app/providers.tsx` connects it to React. Query definitions are kept beside their
+domain, such as `lib/api/users/users.queries.ts`; components can
 pass those definitions directly to `useQuery` or `useMutation`. Query functions
 forward TanStack Query's abort signal, and the shared retry policy makes at most
 one retry for network failures, timeouts, and selected transient 5xx responses.

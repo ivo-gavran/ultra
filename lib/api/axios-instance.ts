@@ -1,7 +1,7 @@
 import axios from "axios";
 
-import { env } from "@/app/env";
 import { normalizeError } from "@/lib/api/errors/normalize-error";
+import { env } from "@/lib/env";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 

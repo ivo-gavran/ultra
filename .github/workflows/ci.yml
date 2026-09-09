@@ -48,7 +48,7 @@ jobs:
         run: pnpm lint
 
       - name: Type-check
-        run: pnpm type-check
+        run: pnpm typecheck
 
       - name: Run Vitest
         run: pnpm test:ci

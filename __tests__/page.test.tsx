@@ -9,7 +9,7 @@ test("renders the home page heading", () => {
   expect(
     screen.getByRole("heading", {
       level: 1,
-      name: /to get started, edit the page\.tsx file/i,
+      name: /authentication and authorization starter/i,
     }),
   ).toBeDefined();
 });
